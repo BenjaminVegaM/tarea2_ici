@@ -1,4 +1,5 @@
-bin/*
-obj/*
-exe/*
-zip/*
+*.bin
+*.obj
+*.exe
+*.zip
+.vscode
