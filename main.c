@@ -14,6 +14,11 @@ typedef struct{
 
 typedef struct{
     char name[31];
+    List * itemList;
+} ListOfTypesOrBrands;
+
+typedef struct{
+    char name[31];
     int quantity;
 } CartNode;
 
@@ -81,7 +86,6 @@ int is_equal_string(void * key1, void * key2) {
 void pressEnterToContinue()
 {
     printf("\n(Presiona Enter para continuar.)\n");
-    getchar();
     char enter = 0;
     while (enter != '\r' && enter != '\n')
     {
@@ -109,6 +113,49 @@ CartNode * searchCartItem(List * cart, char * itemName)
     return cartNode;
 }
 
+//Ingresa el producto a los Mapas
+void insertItem(Maps * maps, Item * importedItem)
+{
+    //Inserta en el mapa por Nombres
+    insertMap(maps->mapNames, importedItem->name, importedItem);
+
+    //Busca si la marca ya existe
+    ListOfTypesOrBrands * auxList = searchMap(maps->mapBrands, importedItem->brand);
+    //Si no es el caso, crea la Lista
+    if(auxList == NULL)
+    {
+        //Crea dato Auxiliar
+        auxList = (ListOfTypesOrBrands *) malloc (sizeof(ListOfTypesOrBrands));    
+        //Le asigna el nombre de la marca al dato
+        strcpy(auxList->name, importedItem->brand);
+        //Inicializa la Lista del dato (Lista de Productos con esta marca)
+        auxList->itemList = createList();
+        //Inserta en el mapa por Marcas
+        insertMap(maps->mapBrands, importedItem->brand, auxList);
+    }
+    //Añade el producto a la lista
+    pushBack(auxList->itemList, importedItem->name);
+
+    //Busca si el tipo ya existe
+    auxList = searchMap(maps->mapTypes, importedItem->type);
+    //Si no es el caso, crea la Lista
+    if(auxList == NULL)
+    {
+        //Crea dato Auxiliar
+        auxList = (ListOfTypesOrBrands *) malloc (sizeof(ListOfTypesOrBrands));    
+        //Le asigna el nombre de la marca al dato
+        strcpy(auxList->name, importedItem->type);
+        //Inicializa la Lista del dato (Lista de Productos con esta marca)
+        auxList->itemList = createList();
+        //Inserta en el mapa por Marcas
+        insertMap(maps->mapTypes, importedItem->type, auxList);
+    }
+    //Añade el producto a la lista
+    pushBack(auxList->itemList, importedItem->name);
+}
+
+/* Insertar Item (Buscar por Tipo y Marca no funciona)
+
 void insertItem(Maps * maps, Item * importedItem)
 {
     //Inserta en el mapa por Nombres
@@ -119,7 +166,7 @@ void insertItem(Maps * maps, Item * importedItem)
 
     //Inserta en el mapa por Tipos
     insertMap(maps->mapTypes, importedItem->type, importedItem);
-}
+}*/
 
 //Carga las canciones desde un archivo .csv y las ingresa a sus respectivas listas
 void readItemsFromCSV(FILE * csvFile, Maps * maps)
@@ -231,26 +278,48 @@ void createItem(Maps * maps)
         }
 }
 
-void searchByBrandOrType(Map * map)
+void searchByBrandOrType(Map * map, Map * mapNames)
 {
-    /*
     char key[31];
 
     printf("Ingrese la clave a buscar:\n");
     getchar();
     gets(key);
+    printf("Buscando productos de %s\n\n", key);
 
-    Item * auxNode = searchMap(map, key);
+    ListOfTypesOrBrands * auxNode = searchMap(map, key);
     if(auxNode)
     {
-        
+        char * aux = firstList(auxNode->itemList);
+
+        printf("Productos %s\n------------------------------\n\n", key);
+
+        Item * auxItem;
+
+        //Recorrer la lista
+        while(aux != NULL)
+        {
+            //Imprimir los datos del producto
+            auxItem = searchMap(mapNames, aux);
+
+            printf("Nombre: %s\n", auxItem->name);
+            printf("Marca: %s\n", auxItem->brand);
+            printf("Tipo: %s\n", auxItem->type);
+            printf("Stock: %i\n", auxItem->stock);
+            printf("Precio: $%i\n\n", auxItem->price);
+            
+            aux = nextList(auxNode->itemList);
+            if(aux == NULL)
+            {
+                break;
+            }
+        }
     }
     else
     {
         printf("No existen productos con esas características.\nVolviendo al menú\n");
         return;
     }
-    */
 }
 
 void searchByName(Map * map)
@@ -398,6 +467,97 @@ void addToCart(Maps * maps)
     printf("Se ha agregado el producto al carrito %s.\n", cartName);
 }
 
+void removeProductFromCart(Map * map, Map * mapNames)
+{
+    Cart * cart = firstMap(map);
+    //Si no hay carritos, volver al menú
+    if(cart == NULL)
+    {
+        printf("Actualmente no existe ningún carrito.\nVolviendo al menú.\n");
+        return;
+    }
+    char cartName[31];
+    printf("Ingrese el nombre del carrito al que desea remover el último producto:\n");
+    getchar();
+    gets(cartName);
+    cart = searchMap(map, cartName);
+    if(cart == NULL)
+    {
+        printf("El carrito no existe, volviendo al menú.\n");
+        return;
+    }
+    printf("Removiendo el último elemento agregado a %s\n", cartName);
+
+    CartNode * cartNode = lastList(cart->itemList);
+
+    Item * item = searchMap(mapNames, cartNode->name);
+    item->stock += cartNode->quantity;
+    
+    popBack(cart->itemList);
+    
+    printf("Producto eliminado.\n");
+}
+
+void pay(Maps * maps)
+{
+    Cart * cart = firstMap(maps->mapCarts);
+    //Si no hay carritos, volver al menú
+    if(cart == NULL)
+    {
+        printf("Actualmente no existe ningún carrito.\nVolviendo al menú.\n");
+        return;
+    }
+    char cartName[31];
+    printf("Ingrese el nombre del carrito que desea pagar:\n");
+    getchar();
+    gets(cartName);
+    cart = searchMap(maps->mapCarts, cartName);
+    if(cart == NULL)
+    {
+        printf("El carrito no existe, volviendo al menú.\n");
+        return;
+    }
+   
+    Item * auxItem;
+    int totalCart = 0;
+    //Mientras el carrito actual exista
+    CartNode * auxCartNode = firstList(cart->itemList);
+    printf("Carrito: %s\n------------------------------\n", cart->cartName);
+    //Recorrer la lista del carrito
+    while(auxCartNode != NULL)
+    {
+        auxItem = searchMap(maps->mapNames, auxCartNode->name);
+        totalCart += auxItem->price * auxCartNode->quantity;
+        auxCartNode = nextList(cart->itemList);
+        if(auxCartNode == NULL)
+        {
+            printf("Total a pagar del carrito %s: $%i\n\n", cart->cartName, totalCart);
+            break;
+        }
+    }
+    printf("Con cuanto dinero va a pagar?\n");
+    int payment = 0;
+    int tries = 0;
+    scanf("%i", &payment);
+
+    while(payment < totalCart)
+    {
+        tries++;
+        if(tries > 3)
+        {
+            printf("Demaciados intentos, volviendo al menú.\n");
+            return;
+        }
+        printf("El dinero no es suficiente.\n");
+        scanf("%i", &payment);
+    }
+    payment -= totalCart;
+    printf("Gracias por su compra, su vuelto es $%i\n", payment);
+    cleanList(cart->itemList);
+    free(cart->cartName);
+    eraseMap(maps->mapCarts, cartName);
+}
+
 void showCarts(Maps * maps)
 {
     Cart * auxCart = firstMap(maps->mapCarts);
@@ -445,7 +605,6 @@ void showCarts(Maps * maps)
         auxCart = nextMap(maps->mapCarts);
         if(auxCart == NULL) break;
     }
-    pressEnterToContinue();
 }
 
 //MAIN----------MAIN----------MAIN----------MAIN----------MAIN----------MAIN----------MAIN----------MAIN----------MAIN----------MAIN
@@ -454,7 +613,7 @@ void showCarts(Maps * maps)
 int main()
 {
     //Valor usado en el menú para saber que opción se quiere realizar
-    int op;
+    int op = 0;
     Maps * maps = (Maps *) malloc (sizeof(Maps));
 
     //Marca el inicio del programa para el usuario
@@ -478,13 +637,14 @@ int main()
 
     while(op!=12)
     {
+        pressEnterToContinue();
         printf("\n--------------------MENU--------------------\n");
         printf("1.- Importar productos desde un archivo CSV\n");
         printf("2.- Exportar productos a un archivo CSV\n");
         printf("3.- Agregar producto\n");
-        printf("4.- Buscar cancion por nombre\n");
-        printf("5.- Buscar canción por marca\n");
-        printf("6.- Buscar cancion por tipo\n");
+        printf("4.- Buscar producto por nombre\n");
+        printf("5.- Buscar productos por marca\n");
+        printf("6.- Buscar productos por tipo\n");
         printf("7.- Mostrar todos los productos\n");
         printf("8.- Agregar al carrito\n");
         printf("9.- Eliminar del carrito\n");
@@ -522,13 +682,11 @@ int main()
 
                 printf("\nProductos ingresados Correctamente\n");
 
-                pressEnterToContinue();
-
                 break;
             }
             case 2:
             {
-                pressEnterToContinue();
+                printf("Esta opción no está disponible actualmente.\n");
                 break;
             }
             case 3:
@@ -537,8 +695,8 @@ int main()
                 aplicación deberá crear un producto nuevo, validando que el
                 producto no exista previamente. Si el producto ya existe tendrá
                 que aumentar el stock disponible en la cantidad indicada.*/
+
                 createItem(maps);
-                pressEnterToContinue();
                 break;
             }
             case 4:
@@ -546,8 +704,8 @@ int main()
                 /*Buscar producto por nombre (nombre):​ La aplicación busca y
                 muestra por pantalla el producto (y su respectiva información),
                 de no existir el producto, debe mostrar un mensaje por pantalla.*/
+
                 searchByName(maps->mapNames);
-                pressEnterToContinue();
                 break;
             }
             case 5:
@@ -557,8 +715,7 @@ int main()
                 información) de la marca especificada, de no existir la marca,
                 debe mostrar un mensaje por pantalla*/
                 
-                searchByBrandOrType(maps->mapBrands);
-                pressEnterToContinue();
+                searchByBrandOrType(maps->mapBrands, maps->mapNames);
                 break;
             }
             case 6:
@@ -568,8 +725,7 @@ int main()
                 información) del tipo especificado, de no existir el tipo,
                 debe mostrar un mensaje por pantalla.*/
 
-                searchByBrandOrType(maps->mapTypes);
-                pressEnterToContinue();
+                searchByBrandOrType(maps->mapTypes, maps->mapNames);
                 break;
             }
             case 7:
@@ -577,8 +733,8 @@ int main()
                 /*Mostrar todos los productos ():​ La aplicación muestra por
                 pantalla todos los productos existentes (y su respectiva
                 información).*/
+
                 showAllItems(maps->mapNames);
-                pressEnterToContinue();
                 break;
             }
             case 8:
@@ -586,15 +742,15 @@ int main()
                 /*Agregar al carrito(nombre_producto, cantidad, nombre_carrito):
                 La aplicación agrega el producto indicado al carrito de compras
                 correspondiente. Si el carrito no existe se crea uno nuevo.*/
+
                 addToCart(maps);
-                pressEnterToContinue();
                 break;
             }
             case 9:
             {
                 /*Eliminar del carrito (nombre_carrito): Se elimina el último
                 producto ingresado al carrito.*/
-                pressEnterToContinue();
+                removeProductFromCart(maps->mapCarts, maps->mapNames);
                 break;
             }
             case 10:
@@ -603,7 +759,7 @@ int main()
                 total a pagar por los productos del carrito, muestra los
                 productos en el orden de ingreso y resta del stock los
                 productos correspondientes. El carrito de compra es eliminado.*/
-                pressEnterToContinue();
+                pay(maps);
                 break;
             }
             case 11:
@@ -612,7 +768,6 @@ int main()
                 carritos de compra creados y la cantidad de productos que
                 tiene cada uno de ellos.*/
                 showCarts(maps);
-                pressEnterToContinue();
                 break;
             }
             case 12:
