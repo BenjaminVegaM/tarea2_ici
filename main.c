@@ -95,18 +95,12 @@ void pressEnterToContinue()
 
 CartNode * searchCartItem(List * cart, char * itemName)
 {
-    printf("searchCartItem\n");
     CartNode * cartNode = firstList(cart);
-    printf("Item searched: %s\n Current Item: %s\n", itemName, cartNode->name);
     while(is_equal_string(cartNode->name, itemName) == 0)
     {
-        printf("Item: %s\n", cartNode->name);
-        printf("Producto no encontrado en este nodo\n");
         cartNode = nextList(cart);
-        printf("Probando con siguiente nodo\n");
         if(cartNode == NULL)
         {
-            printf("\nEl producto no existe\n\n");
             return NULL;
         }
     }
@@ -154,30 +148,13 @@ void insertItem(Maps * maps, Item * importedItem)
     pushBack(auxList->itemList, importedItem->name);
 }
 
-/* Insertar Item (Buscar por Tipo y Marca no funciona)
-
-void insertItem(Maps * maps, Item * importedItem)
-{
-    //Inserta en el mapa por Nombres
-    insertMap(maps->mapNames, importedItem->name, importedItem);
-
-    //Inserta en el mapa por Marcas
-    insertMap(maps->mapBrands, importedItem->brand, importedItem);
-
-    //Inserta en el mapa por Tipos
-    insertMap(maps->mapTypes, importedItem->type, importedItem);
-}*/
-
 //Carga las canciones desde un archivo .csv y las ingresa a sus respectivas listas
 void readItemsFromCSV(FILE * csvFile, Maps * maps)
 {
     char linea[1024];
 
-    printf("While\n");
     while(fgets(linea, 1023, csvFile) != NULL)
     {
-        printf("Dentro de While\nCreando Producto\n");
-
         Item * importedItem = (Item *)malloc(sizeof(Item));
 
         if(importedItem == NULL)
@@ -213,7 +190,7 @@ void readItemsFromCSV(FILE * csvFile, Maps * maps)
             printf("Cantidad: %i\n", importedItem->stock);
 
             importedItem->price = atoi(get_csv_field(linea, 4));
-            printf("Precio: $%i\n", importedItem->price);
+            printf("Precio: $%i\n\n", importedItem->price);
 
             insertItem(maps, importedItem);
         }
@@ -226,56 +203,53 @@ void createItem(Maps * maps)
 
     Item * newItem = (Item *)malloc(sizeof(Item));
 
-        if(newItem == NULL)
-        {
-            printf("Error al almacenar memoria para el producto, saliendo del programa.");
-            exit(1);
-        }
-        
-        printf("Ingrese el nombre del producto (Respete mayúsculas):\n");
-        getchar();
-        gets(newItem->name);
-        printf("Nombre ingresado: %s\n", newItem->name);
+    if(newItem == NULL)
+    {
+        printf("Error al almacenar memoria para el producto, saliendo del programa.");
+        exit(1);
+    }
+    
+    printf("Ingrese el nombre del producto (Respete mayúsculas):\n");
+    getchar();
+    gets(newItem->name);
+    printf("Nombre ingresado: %s\n", newItem->name);
 
-        Item * auxNode = searchMap(maps->mapNames, newItem->name);
-        if(auxNode != NULL)
+    Item * auxNode = searchMap(maps->mapNames, newItem->name);
+    if(auxNode != NULL)
+    {
+        printf("El producto ya existe, desea cambiar el stock del mismo?\n1.- Sí\n2.- No\n\n");
+        int p;
+        scanf("%i", &p);
+        if(p == 1)
         {
-            printf("El producto ya existe, desea cambiar el stock del mismo?\n1.- Sí\n2.- No\n\n");
-            int p;
-            scanf("%i", &p);
-            if(p == 1)
-            {
-                printf("Ingrese la variación del stock (+N/-N):\n");
-                scanf("%i", &newItem->stock);
-                auxNode->stock+= newItem->stock;
-                printf("El nuevo stock es de %i\n", auxNode->stock);
-            }
-            else
-            {
-                printf("Volviendo al menú.\n");
-                return;
-            }
+            printf("Ingrese la variación del stock (+N/-N):\n");
+            scanf("%i", &newItem->stock);
+            auxNode->stock+= newItem->stock;
+            printf("El nuevo stock es de %i\n", auxNode->stock);
         }
         else
         {
-            printf("Ingrese la marca del producto:\n");
-            gets(newItem->brand);
-            printf("Marca ingresada: %s\n", newItem->brand);
-
-            printf("Ingrese el tipo de producto:\n");
-            gets(newItem->type);
-            printf("Tipo ingresado: %s\n", newItem->type);
-
-            printf("Ingrese la cantidad inicial del producto:\n");
-            scanf("%i", &newItem->stock);
-            printf("Cantidad ingresada: %i\n", newItem->stock);
-
-            printf("Ingrese el valor del producto:\n");
-            scanf("%i", &newItem->price);
-            printf("Precio ingresado: $%i\n", newItem->price);
-
-            insertItem(maps, newItem);
+            printf("Volviendo al menú.\n");
+            return;
         }
+    }
+    else
+    {
+        printf("Ingrese la marca del producto:\n");
+        gets(newItem->brand);
+
+        printf("Ingrese el tipo de producto:\n");
+        gets(newItem->type);
+
+        printf("Ingrese la cantidad inicial del producto:\n");
+        scanf("%i", &newItem->stock);
+
+        printf("Ingrese el valor del producto:\n");
+        scanf("%i", &newItem->price);
+
+        insertItem(maps, newItem);
+        printf("Producto creado correctamente");
+    }
 }
 
 void searchByBrandOrType(Map * map, Map * mapNames)
@@ -405,17 +379,8 @@ void addToCart(Maps * maps)
     printf("Ingrese el nombre del carrito al que desea agregar %i unidades de %s.\n", newCartItem->quantity, newCartItem->name);
     getchar();
     gets(cartName);
-    printf("Buscando carrito\n");
     //Busca si el carrito existe
     Cart * auxCart = searchMap(maps->mapCarts, cartName);
-    printf("Carrito buscado\n");
-    if(auxCart != NULL)
-    {
-        printf("\nComparando %s con %s\n", auxCart->cartName, cartName);
-        int b = strcmp(cartName, auxCart->cartName);
-        printf("b = %i (1 diferente, 0 igual)\n\n", b);
-    }
-
     //Si no existe, se pregunta si se desea crearlo (en caso de haberse equivocado de nombre)
     if(auxCart == NULL || strcmp(cartName, auxCart->cartName) == 1)
     {
@@ -434,18 +399,15 @@ void addToCart(Maps * maps)
         auxCart = (Cart *) malloc (sizeof(Cart));
         strcpy(auxCart->cartName, cartName);
         //Si se desea crearlo, se crea una Lista (carrito)
-        printf("creando lista\n");
         auxCart->itemList = createList();
         //Se agrega el Producto al carrito
-        printf("agregando producto a la lista\n");
         pushBack(auxCart->itemList, newCartItem);
         //El carrito se ingresa en el mapa con clave "nombre del carrito"
-        printf("agregando carrito al mapa\n");
         insertMap(maps->mapCarts, auxCart->cartName, auxCart);
     }
     else
     {
-        printf("El carrito existe, buscando producto en el carrito\n");
+        printf("Buscando producto en el carrito\n");
         //Se busca el producto en el carrito
         CartNode * auxCartNode = searchCartItem(auxCart->itemList, itemName);
         //Si el producto no estaba en el carrito
@@ -457,7 +419,7 @@ void addToCart(Maps * maps)
         }
         else
         {
-            printf("El producto si existe en el carrito, incrementando cantidad\n");
+            printf("El producto si existe en el carrito, sumando la cantidad\n");
             //Se incrementa la cantidad del producto en el carrito
             auxCartNode->quantity += newCartItem->quantity;
         }
@@ -545,14 +507,15 @@ void pay(Maps * maps)
         tries++;
         if(tries > 3)
         {
-            printf("Demaciados intentos, volviendo al menú.\n");
+            printf("Demasiados intentos, volviendo al menú.\n");
             return;
         }
-        printf("El dinero no es suficiente.\n");
+        printf("El dinero no es suficiente, ingrese un valor mayor o igual al total.\n");
         scanf("%i", &payment);
     }
     payment -= totalCart;
-    printf("Gracias por su compra, su vuelto es $%i\n", payment);
+    printf("Gracias por su compra");
+    if(payment != 0) printf(", su vuelto es $%i\n", payment);
     cleanList(cart->itemList);
     free(cart->cartName);
     eraseMap(maps->mapCarts, cartName);
@@ -620,19 +583,15 @@ int main()
     printf("INICIO\n");
 
     //Crear Mapa con clave: nombre
-    printf("Creando Mapa con clave: nombre\n");
     maps->mapNames = createMap(is_equal_string);
 
     //Crear Mapa con clave: marca
-    printf("Creando Mapa con clave: marca\n");
     maps->mapBrands = createMap(is_equal_string);
 
     //Crear Mapa con clave: nombre
-    printf("Creando Mapa con clave: tipo\n");
     maps->mapTypes = createMap(is_equal_string);
 
     //Crear Mapa para de carritos
-    printf("Creando Mapa para carritos\n");
     maps->mapCarts = createMap(is_equal_string);
 
     while(op!=12)
@@ -654,7 +613,7 @@ int main()
 
         printf("--------------------------------------------\nIndica la opción:\n");
         scanf("%i", &op);
-        printf("Opcion escojida = %i\n", op);
+        printf("Opcion escojida = %i\n\n", op);
 
         switch(op)
         {
